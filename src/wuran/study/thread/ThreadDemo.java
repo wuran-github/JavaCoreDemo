@@ -6,7 +6,8 @@ public class ThreadDemo {
     public static void main(String[] args) {
 //        caputreInterruptTest();
 //        stateTest();
-        daemonTest();
+//        daemonTest();
+        captureThreadUnchekedExceptionTest();
     }
 
     private static void normalTest() {
@@ -31,7 +32,7 @@ public class ThreadDemo {
         t.interrupt();
     }
 
-    private static void caputreInterruptTest() {
+    private static void captureInterruptTest() {
         Runnable r = new SumOneToThousand();
         Thread t = new Thread(r);
         t.start();
@@ -56,7 +57,28 @@ public class ThreadDemo {
         Thread t = new Thread(r);
         t.start();
     }
+    private static void captureThreadUnchekedExceptionTest(){
+        Runnable r = new CaptureExceptionDemo();
+        Thread t= new Thread(r);
+        t.setUncaughtExceptionHandler(new Captor());
+        t.start();
+    }
 
+}
+class Captor implements Thread.UncaughtExceptionHandler{
+
+    @Override
+    public void uncaughtException(Thread t, Throwable e) {
+        System.out.println(e.getMessage());
+        System.out.println("capture Exception success ");
+    }
+}
+class CaptureExceptionDemo implements Runnable{
+    @Override
+    public void run() {
+        int[] t = new int[1];
+        t[1] = 0;
+    }
 }
 class DaemonSimple implements Runnable{
     private ChildDaemon daemon = null;
