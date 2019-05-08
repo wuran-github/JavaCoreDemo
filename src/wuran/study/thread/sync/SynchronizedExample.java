@@ -3,41 +3,13 @@ package wuran.study.thread.sync;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
-import java.util.UUID;
-import java.util.concurrent.locks.Condition;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
-public class RaceConditionExample {
+public class SynchronizedExample {
     public static void main(String[] args) {
-//        oneRunnableMultiThreadTest();
         normalTest();
     }
-
-    private static void oneRunnableMultiThreadTest() {
-        Runnable r = () -> {
-            int i = 0;
-            while (true) {
-                i++;
-                System.out.println(Thread.currentThread().getId() + " " + i);
-                try {
-                    Thread.sleep(1000);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            }
-        };
-        Thread t1 = new Thread(r);
-        Thread t2 = new Thread(r);
-        Thread t3 = new Thread(r);
-        t1.start();
-        t2.start();
-        t3.start();
-
-    }
-
     private static void normalTest() {
-        Bank bank = new Bank();
+        SyncBank bank = new SyncBank();
         Runnable r = () -> {
             while (true) {
                 Random fromRandom = new Random();
@@ -64,16 +36,11 @@ public class RaceConditionExample {
         t3.start();
     }
 }
-
-class Bank {
+class SyncBank {
     List<Account> accounts;
-    private Lock lock;
-    private Condition sufficientFunds;
 
-    public Bank() {
+    public SyncBank() {
         accounts = new ArrayList<>();
-        lock = new ReentrantLock();
-        sufficientFunds = lock.newCondition();
         init();
     }
 
@@ -84,12 +51,11 @@ class Bank {
         }
     }
 
-    public void transfer(int from, int to, int amount) {
-        lock.lock();
+    public synchronized void transfer(int from, int to, int amount) {
         try {
             int fromBalance = getBalance(from);
             while (fromBalance < amount) {
-                sufficientFunds.await();
+                wait();
             }
             int toBalance = accounts.get(to).getBalance();
             fromBalance -= amount;
@@ -97,11 +63,9 @@ class Bank {
             accounts.get(from).setBalance(fromBalance);
             accounts.get(to).setBalance(toBalance);
             System.out.println(String.format("%d to %d , amount: %d totalBalance: %d ", from, to, amount, getTotalBalance()));
-            sufficientFunds.signalAll();
+            notifyAll();
         } catch (InterruptedException e) {
             e.printStackTrace();
-        } finally {
-            lock.unlock();
         }
     }
 
@@ -120,30 +84,30 @@ class Bank {
     public int size() {
         return accounts.size();
     }
+    private class Account {
+        private int id;
+        private int balance;
+
+        public Account(int id, int balance) {
+            this.id = id;
+            this.balance = balance;
+        }
+
+        public int getId() {
+            return id;
+        }
+
+        public void setId(int id) {
+            this.id = id;
+        }
+
+        public int getBalance() {
+            return balance;
+        }
+
+        public void setBalance(int balance) {
+            this.balance = balance;
+        }
+    }
 }
 
-class Account {
-    private int id;
-    private int balance;
-
-    public Account(int id, int balance) {
-        this.id = id;
-        this.balance = balance;
-    }
-
-    public int getId() {
-        return id;
-    }
-
-    public void setId(int id) {
-        this.id = id;
-    }
-
-    public int getBalance() {
-        return balance;
-    }
-
-    public void setBalance(int balance) {
-        this.balance = balance;
-    }
-}
